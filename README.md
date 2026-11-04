@@ -12,8 +12,8 @@ El proyecto está en etapa inicial: hoy existe la base del backend. El frontend 
 | Lenguaje | TypeScript | Definido |
 | Servidor HTTP | Express 5 | Definido |
 | Validación | Zod 4 | Definido |
-| Base de datos | PostgreSQL o MongoDB | Por definir |
-| ORM | Prisma (PostgreSQL) o Mongoose (MongoDB) | Por definir |
+| Base de datos | PostgreSQL | Modelo inicial SQL disponible |
+| ORM | - | Por definir |
 | Autenticación | JWT | Previsto |
 | Frontend | React con Vite | Previsto, sin crear |
 | Tests | - | Por definir |
@@ -46,6 +46,30 @@ Se definen en `Backend/.env` y se validan al arrancar en `src/config/env.ts`. Si
 |---|---|---|---|
 | `PORT` | No | `3000` | Puerto del servidor |
 | `NODE_ENV` | No | `development` | `development`, `production` o `test` |
+
+### Inicializar la base de datos PostgreSQL
+
+La tabla de roles está en
+`Backend/src/shared/db/migrations/001_initial_schema.sql`. Este archivo crea
+únicamente `roles` y carga los roles iniciales `admin`, `barber` y `client`.
+No crea la tabla de usuarios ni las tablas de servicios o turnos.
+
+Desde la carpeta raíz del proyecto, ejecuta el archivo en una base de datos
+PostgreSQL vacía (reemplaza los valores entre `< >` por los tuyos):
+
+```bash
+psql -U <usuario_postgres> -d <nombre_base_de_datos> -f Backend/src/shared/db/migrations/001_initial_schema.sql
+```
+
+Por ejemplo, si tu usuario de PostgreSQL es `postgres` y tu base se llama
+`barberos`, escribe:
+
+```bash
+psql -U postgres -d barberos -f Backend/src/shared/db/migrations/001_initial_schema.sql
+```
+
+La API todavía no se conecta a PostgreSQL; este archivo crea la tabla y los
+datos iniciales, pero la conexión de la aplicación queda para una tarea posterior.
 
 ### Scripts
 
