@@ -12,8 +12,8 @@ El proyecto está en etapa inicial: hoy existe la base del backend. El frontend 
 | Lenguaje | TypeScript | Definido |
 | Servidor HTTP | Express 5 | Definido |
 | Validación | Zod 4 | Definido |
-| Base de datos | PostgreSQL o MongoDB | Por definir |
-| ORM | Prisma (PostgreSQL) o Mongoose (MongoDB) | Por definir |
+| Base de datos | PostgreSQL | Definido |
+| ORM | Prisma 7 con `@prisma/adapter-pg` | Definido |
 | Autenticación | JWT | Previsto |
 | Frontend | React con Vite | Previsto, sin crear |
 | Tests | - | Por definir |
@@ -22,21 +22,89 @@ El proyecto está en etapa inicial: hoy existe la base del backend. El frontend 
 
 - Node.js 20.19 o superior
 - npm
+- PostgreSQL corriendo en tu máquina (cualquier versión actual; se probó con la 18)
 
 ## Levantar el backend
 
 La primera vez:
 
-```bash
-cd Backend
-npm install
-cp .env.example .env
-npm run dev
-```
+1. Instalar dependencias. Al terminar, `postinstall` corre `prisma generate` y crea el cliente en `src/generated/prisma/`.
 
-Las siguientes veces alcanza con `npm run dev` dentro de `Backend/`.
+   ```bash
+   cd Backend
+   npm install
+   ```
+
+2. Crear la base de datos vacía en tu Postgres local, con pgAdmin o con:
+
+   ```bash
+   createdb -U postgres psqlDB
+   ```
+
+3. Crear el `.env` y poner tu usuario y contraseña de Postgres en `DATABASE_URL`:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+4. Crear las tablas aplicando las migraciones del repo:
+
+   ```bash
+   npm run db:migrate
+   ```
+
+5. Cargar los datos base (por ahora solo roles). Se puede correr las veces que quieras:
+
+   ```bash
+   npm run db:seed
+   ```
+
+6. Arrancar el servidor:
+
+   ```bash
+   npm run dev
+   ```
+
+Las siguientes veces alcanza con `npm run dev` dentro de `Backend/`. Después de un `git pull` que traiga migraciones nuevas, corre `npm run db:migrate` antes.
 
 El servidor queda en `http://localhost:3000`. Para comprobar que funciona: `GET http://localhost:3000/api/health`.
+
+### Base de datos (Prisma)
+
+- `prisma/schema.prisma`: los modelos (tablas).
+- `prisma/migrations/`: el SQL de cada cambio. Se sube a git.
+- `prisma.config.ts`: configuración de la CLI. Lee `DATABASE_URL` del `.env`.
+- `src/generated/prisma/`: el cliente generado. **No** se sube a git; se crea con `npm install` o `npm run db:generate`.
+- `src/shared/db/connection.ts`: exporta `prisma`, la única instancia del cliente. Los services la importan de ahí.
+
+- `prisma/seed.ts`: carga los datos base (roles). Se corre con `npm run db:seed`.
+
+Convenciones:
+
+| Qué | Convención | Ejemplo |
+|---|---|---|
+| Clave primaria | UUID v7 en todas las tablas | `id String @id @default(uuid(7)) @db.Uuid` |
+| Foreign key | Mismo tipo que la PK | `roleId String @map("role_id") @db.Uuid` |
+| Modelo | PascalCase singular, `@@map` a tabla en plural snake_case | `model User` → tabla `users` |
+| Campos | camelCase, `@map` a columna snake_case | `passwordHash` → `password_hash` |
+| Auditoría | `createdAt` y `updatedAt` en todas las tablas | `@default(now())` / `@updatedAt` |
+| Fechas | Con zona horaria | `@db.Timestamptz(3)` |
+
+Para cambiar el modelo de datos:
+
+1. Editar `prisma/schema.prisma`.
+2. `npm run db:migrate -- --name descripcion_del_cambio` (crea la migración y la aplica).
+3. `npm run db:generate` (actualiza los tipos del cliente).
+4. Subir a git el schema y la carpeta nueva en `prisma/migrations/`.
+
+### Problemas comunes
+
+| Síntoma | Causa | Solución |
+|---|---|---|
+| `Cannot find module '../../generated/prisma/client'` | El cliente no se generó | `npm run db:generate`. Si VS Code sigue marcándolo, `Ctrl+Shift+P` → "TypeScript: Restart TS Server" |
+| `P1000: Authentication failed` | Usuario o contraseña incorrectos en `DATABASE_URL` | Revisar `.env` |
+| `P1003: Database does not exist` | No se creó la base | Paso 2 |
+| `Variables de entorno inválidas` al arrancar | Falta `.env` o `DATABASE_URL` | Paso 3 |
 
 ### Variables de entorno
 
@@ -46,6 +114,7 @@ Se definen en `Backend/.env` y se validan al arrancar en `src/config/env.ts`. Si
 |---|---|---|---|
 | `PORT` | No | `3000` | Puerto del servidor |
 | `NODE_ENV` | No | `development` | `development`, `production` o `test` |
+| `DATABASE_URL` | Sí | - | Conexión a PostgreSQL: `postgresql://USUARIO:PASSWORD@localhost:5432/psqlDB?schema=public` |
 
 ### Scripts
 
@@ -54,6 +123,10 @@ Se definen en `Backend/.env` y se validan al arrancar en `src/config/env.ts`. Si
 | `npm run dev` | Corre el servidor con recarga automática (tsx) |
 | `npm run build` | Compila TypeScript a `dist/` |
 | `npm start` | Corre la versión compilada |
+| `npm run db:migrate` | Aplica las migraciones pendientes y, si cambiaste el schema, crea una nueva |
+| `npm run db:generate` | Regenera el cliente de Prisma |
+| `npm run db:studio` | Abre Prisma Studio para ver y editar datos en el navegador |
+| `npm run db:seed` | Carga los datos base (roles). No duplica si ya existen |
 
 ## Estructura
 
@@ -71,6 +144,11 @@ BarberOS/
     │       ├── db/             Conexión a la base de datos
     │       ├── middleware/     Auth, roles, validación, 404 y manejo de errores
     │       └── utils/          Funciones auxiliares
+    ├── docs/                   Notas técnicas (ej: cómo se configuró Prisma)
+    ├── prisma/
+    │   ├── schema.prisma       Modelos de la base de datos
+    │   └── migrations/         Historial de migraciones (se crea con la primera)
+    ├── prisma.config.ts        Configuración de la CLI de Prisma
     ├── .env.example
     ├── package.json
     └── tsconfig.json

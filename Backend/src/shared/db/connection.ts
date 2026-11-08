@@ -1,1 +1,9 @@
-// definir si usamos psql + prisma o mongo + mongoose
+// Cliente de conexion a la base de datos usando Prisma y PostgreSQL
+
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "../../generated/prisma/client";
+import { env } from "../../config/env";
+
+const adapter = new PrismaPg({ connectionString: env.DATABASE_URL });
+
+export const prisma = new PrismaClient({ adapter });

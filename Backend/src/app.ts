@@ -1,5 +1,7 @@
 import express from "express";
 import cors from "cors";
+import { prisma } from "./shared/db/connection";
+
 
 const app = express(); 
 
@@ -8,8 +10,13 @@ const app = express();
 // app.use(express.json());
 
 // Health check endpoint
-app.get("/api/health", (req, res) => { 
-  res.json({ status: "OK" });
+app.get("/api/health", async (req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ status: "OK", db: "connected" });
+  } catch (error) {
+    res.status(503).json({ status: "ERROR", db: "disconnected" });
+  }
 });
 
 export default app;
