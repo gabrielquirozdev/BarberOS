@@ -10,3 +10,51 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+// Convenciones: ver "Base de datos (Prisma)" en el README.
+// - PK: String @id @default(uuid(7)) @db.Uuid
+// - Campos en camelCase con @map a snake_case; modelos en PascalCase singular con @@map a tabla en plural.
+
+model Role {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  name        String   @unique @db.VarChar(50) // ADMIN, BARBER, CLIENT
+  description String?  @db.VarChar(255)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  users User[]
+
+  @@map("roles")
+}
+
+model User {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  name         String   @db.VarChar(100)
+  surname      String   @db.VarChar(100)
+  email        String   @unique @db.VarChar(255) // se guarda en minúsculas desde el código
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  phone        String?  @db.VarChar(30)
+  enabled      Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  roleId String @map("role_id") @db.Uuid
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  @@index([roleId])
+  @@map("users")
+}
+
+model Service {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  name        String   @unique @db.VarChar(100) // "Corte", "Corte + barba", "Afeitado"
+  description String?  @db.VarChar(500)
+  durationMin Int      @map("duration_min") // cuánto ocupa en la agenda
+  price       Decimal  @db.Decimal(10, 2)
+  active      Boolean  @default(true) // se desactiva, no se borra
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("services")
+}
+

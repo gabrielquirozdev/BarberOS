@@ -53,7 +53,13 @@ La primera vez:
    npm run db:migrate
    ```
 
-5. Arrancar el servidor:
+5. Cargar los datos base (por ahora solo roles). Se puede correr las veces que quieras:
+
+   ```bash
+   npm run db:seed
+   ```
+
+6. Arrancar el servidor:
 
    ```bash
    npm run dev
@@ -70,6 +76,19 @@ El servidor queda en `http://localhost:3000`. Para comprobar que funciona: `GET 
 - `prisma.config.ts`: configuración de la CLI. Lee `DATABASE_URL` del `.env`.
 - `src/generated/prisma/`: el cliente generado. **No** se sube a git; se crea con `npm install` o `npm run db:generate`.
 - `src/shared/db/connection.ts`: exporta `prisma`, la única instancia del cliente. Los services la importan de ahí.
+
+- `prisma/seed.ts`: carga los datos base (roles). Se corre con `npm run db:seed`.
+
+Convenciones:
+
+| Qué | Convención | Ejemplo |
+|---|---|---|
+| Clave primaria | UUID v7 en todas las tablas | `id String @id @default(uuid(7)) @db.Uuid` |
+| Foreign key | Mismo tipo que la PK | `roleId String @map("role_id") @db.Uuid` |
+| Modelo | PascalCase singular, `@@map` a tabla en plural snake_case | `model User` → tabla `users` |
+| Campos | camelCase, `@map` a columna snake_case | `passwordHash` → `password_hash` |
+| Auditoría | `createdAt` y `updatedAt` en todas las tablas | `@default(now())` / `@updatedAt` |
+| Fechas | Con zona horaria | `@db.Timestamptz(3)` |
 
 Para cambiar el modelo de datos:
 
@@ -107,6 +126,7 @@ Se definen en `Backend/.env` y se validan al arrancar en `src/config/env.ts`. Si
 | `npm run db:migrate` | Aplica las migraciones pendientes y, si cambiaste el schema, crea una nueva |
 | `npm run db:generate` | Regenera el cliente de Prisma |
 | `npm run db:studio` | Abre Prisma Studio para ver y editar datos en el navegador |
+| `npm run db:seed` | Carga los datos base (roles). No duplica si ya existen |
 
 ## Estructura
 
